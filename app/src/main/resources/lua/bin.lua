@@ -26,7 +26,10 @@ local function callback(s)
     LuaUtil.rmDir(File(activity.getLuaExtDir("bin/.temp")))
     bin_dlg.hide()
     bin_dlg.Message = ""
-    if not s:find("成功") then
+    if not s then
+        error_dlg.Message = "打包失败：任务异常终止（请检查组件是否完整）"
+        error_dlg.show()
+    elseif not s:find("成功") then
         error_dlg.Message = s
         error_dlg.show()
     end
@@ -53,8 +56,21 @@ end
 local function binapk(luapath, apkpath)
     require "import"
     import "console"
-    compile "mao"
-    compile "sign"
+
+    -- 提高健壮性：增加组件加载保护
+    local function safe_compile(name)
+        local s,e = pcall(compile, name)
+        if not s then
+            return false, "缺失核心打包组件: " .. name .. "\n请检查 assets 目录下是否有对应的 dex 文件。"
+        end
+        return true
+    end
+
+    local res, err = safe_compile("mao")
+    if not res then return err end
+    res, err = safe_compile("sign")
+    if not res then return err end
+
     import "java.util.zip.*"
     import "java.io.*"
     import "mao.res.*"

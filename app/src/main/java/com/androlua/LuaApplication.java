@@ -187,6 +187,10 @@ public class LuaApplication extends Application implements LuaContext {
         luaCpath = getApplicationInfo().nativeLibraryDir + "/lib?.so" + ";" + libDir + "/lib?.so";
         //luaDir = extDir;
         luaLpath = luaMdDir + "/?.lua;" + luaMdDir + "/lua/?.lua;" + luaMdDir + "/?/init.lua;";
+        
+        // 自动部署闭源 dex 模块
+        copyDexFromAssets("mao.dex");
+        copyDexFromAssets("sign.dex");
         //checkInfo();
     }
 
@@ -347,6 +351,31 @@ public class LuaApplication extends Application implements LuaContext {
 
     }
 
+    /**
+     * 从 assets 目录复制 dex 文件到应用私有目录
+     * @param dexFileName dex 文件名
+     */
+    private void copyDexFromAssets(String dexFileName) {
+        File destFile = new File(localDir, dexFileName);
+        if (destFile.exists()) {
+            return; // 已存在，跳过复制
+        }
+        
+        try {
+            InputStream is = getAssets().open(dexFileName);
+            FileOutputStream fos = new FileOutputStream(destFile);
+            byte[] buffer = new byte[4096];
+            int byteCount;
+            while ((byteCount = is.read(buffer)) != -1) {
+                fos.write(buffer, 0, byteCount);
+            }
+            fos.flush();
+            is.close();
+            fos.close();
+        } catch (IOException e) {
+            // dex 文件不存在时静默失败，由 Lua 代码处理错误
+        }
+    }
 
 } 
 
